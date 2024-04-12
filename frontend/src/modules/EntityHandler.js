@@ -1,22 +1,15 @@
 import * as THREE from '../libs/three.module.js';
 import { scene } from './GraphicsHandler.js';
-
 /**
  * @typedef {{x: number, y: number, z: number; yaw?: number; pitch?: number}} PositionEntry
  */
 
 /**
- * @typedef {{start: PositionEntry; end: PositionEntry; startAt: number; finished: boolean; endAt: number }} PositionTransitionEntry
- */
-
-/**
- * @type {Record<string, { mesh: any; id: string; type: string; target?: PositionTransitionEntry }>}
+ * @type {Record<string, { mesh: any; id: string; type: string; target?: {start: PositionEntry; end: PositionEntry; time: number; finished: boolean; } }>}
  */
 export const entityRecord = {};
 let entityList = [];
-
 const playerMaterial = new THREE.MeshLambertMaterial();
-
 function createPlayerMesh(name) {
     const group = new THREE.Group();
     group.name = name;
@@ -31,26 +24,22 @@ function createPlayerMesh(name) {
     const body = new THREE.Mesh(bodyGeometry, playerMaterial);
     body.name = "Body";
     body.position.set(0, -6 / 16, 0);
-
     const legGeometry = new THREE.BoxGeometry(8 / 16, 12 / 16, 4 / 16);
     // @ts-ignore
     const leg = new THREE.Mesh(legGeometry, playerMaterial);
     leg.position.set(0, - 18 / 16, 0);
-
     group.add(head);
     group.add(body);
     group.add(leg);
     scene.add(group);
     return group;
 }
-
 export function removeAllEntities() {
     for (let i = entityList.length - 1; i >= 0; i--) {
         scene.remove(entityList[i]);
     }
     entityList = [];
 }
-
 export function addEntityToScene(entity) {
     const {
         id, type, name,
@@ -78,7 +67,7 @@ export function addEntityToScene(entity) {
     entityList.push(mesh);
 }
 
-export function setEntityTargetPosition(entity, delay, now) {
+export function updateEntityPosition(entity, delay, now) {
     const mesh = entityRecord[entity.id].mesh;
     if (!delay) {
         mesh.position.set(entity);
@@ -103,13 +92,11 @@ export function setEntityTargetPosition(entity, delay, now) {
             yaw: entity.yaw,
             pitch: entity.pitch,
         },
-        startAt: now,
-        endAt: now + delay,
+        time: now,
         finished: false,
     }
     return;
 }
-
 export function removeEntity(entityId) {
     if (!entityRecord[entityId]) {
         return;
@@ -121,29 +108,28 @@ export function removeEntity(entityId) {
     entityList = entityList.filter(entity => entity.id !== entityId);
 }
 
-export function update(time) {
+export function update(t) {
     for (const pid in entityRecord) {
         if (!entityRecord[pid].target || entityRecord[pid].target.finished) {
             continue;
         }
-        const startPosition = entityRecord[pid].target.start;
-        const endPosition = entityRecord[pid].target.end;
+        const originPosition = entityRecord[pid].target.origin;
+        const targetPosition = entityRecord[pid].target.target;
         const n = new Date().getTime();
-        const duration = entityRecord[pid].target.time + entityRecord[pid].target.;
-        if (entityRecord[pid].target.time +) {
+        if (entityRecord[pid].target.end < n) {
             entityRecord[pid].target.finished = true;
-            entityRecord[pid].group.position.set(endPosition[0], endPosition[1], endPosition[2]);
-            entityRecord[pid].group.rotation.set(0, endPosition[4], 0);
+            entityRecord[pid].group.position.set(targetPosition[0], targetPosition[1], targetPosition[2]);
+            entityRecord[pid].group.rotation.set(0, targetPosition[4], 0);
         } else {
             const t = (n - entityRecord[pid].target.start) / (entityRecord[pid].target.end - entityRecord[pid].target.start);
             if (isNaN(t)) {
                 console.log('t is NaN');
                 continue;
             }
-            const x = b(startPosition[0], endPosition[0], t);
-            const y = b(startPosition[1], endPosition[1], t);
-            const z = b(startPosition[2], endPosition[2], t);
-            const pitch = b(startPosition[4], endPosition[4], t);
+            const x = b(originPosition[0], targetPosition[0], t);
+            const y = b(originPosition[1], targetPosition[1], t);
+            const z = b(originPosition[2], targetPosition[2], t);
+            const pitch = b(originPosition[4], targetPosition[4], t);
             if (isNaN(x) || isNaN(y) || isNaN(z) || isNaN(pitch)) {
                 continue;
             }
