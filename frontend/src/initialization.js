@@ -61,11 +61,11 @@ async function initialization() {
 		await InputHandler.load(canvas, scene, camera);
 
 		setLoadingText('Initializing Multiplayer');
-		await MultiplayerHandler.load();
+		//await MultiplayerHandler.load();
 		
-		if (!MultiplayerHandler.active) {
+		//if (!MultiplayerHandler.active) {
 			WorldHandler.startLocalWorld();
-		}
+		//}
 
 		setLoadingText('Initializing the GUI');
 		await ForegroundHandler.load();
